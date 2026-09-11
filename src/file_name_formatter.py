@@ -1,22 +1,43 @@
 import argparse
 from pathlib import Path
 
-# list of files to not rename
-do_not_change_these_files = [
-    "README.md"
-]
 
-# list of dirs not to change
-do_not_change_these_dirs = [
+# list of files and dirs not to rename
+do_not_change_these = [
+    "README.md",
     "src"
 ]
 
-######################################################
-#                  Helper Functions                  #
-######################################################
+
+def _append_do_not_change_list(append_name: [str]) -> None:
+    """
+    Append user povided files or dirs to the do not change list
+
+    :param list append_name:
+    :return: None
+    """
+    if append_name is not None:
+        print(f"Ignoring: {append_name}")
+        do_not_change_these.append(append_name)
 
 
-def get_path_object(user_path: str) -> Path:
+def _parse_args() -> None:
+    """
+    Parse user args from CLI input
+    :return: None
+    """
+    parser = argparse.ArgumentParser(
+    prog="Case changer",
+    description="Changes directory names to uppercase and file names to lowercase with underscores"
+    )
+
+    parser.add_argument("path")
+    parser.add_argument("-i", "--ignore")
+
+    return parser.parse_args()
+
+
+def _get_path_object(user_path: str) -> Path:
     """
     Convert a user str file path into a Path obejct
 
@@ -26,7 +47,7 @@ def get_path_object(user_path: str) -> Path:
     return Path(user_path)
 
 
-def print_all_objects(dir: Path) -> None:
+def _print_all_objects(dir: Path) -> None:
     """
     Print the directories then the files at a speciied directory
 
@@ -44,7 +65,7 @@ def print_all_objects(dir: Path) -> None:
     print("\n")
 
 
-def uppercase_dirs(dir: Path) -> None:
+def _uppercase_dirs(dir: Path) -> None:
     """
     Iterate over objects in a directory and convert the naming of directories to 
     be all uppercase and convert any hyphens to underscores.
@@ -53,11 +74,11 @@ def uppercase_dirs(dir: Path) -> None:
     :return: None
     """
     for x in dir.iterdir():
-        if x.is_dir() and not x.name.startswith(".") and x.name not in do_not_change_these_dirs:
-            x.rename(x.name.upper().replace("-", "_"))
+        if x.is_dir() and not x.name.startswith(".") and x.name not in do_not_change_these:
+            x.rename(x.with_name(x.name.upper().replace("-", "_")))
+            
 
-
-def lowercase_files(dir: Path) -> None:
+def _lowercase_files(dir: Path) -> None:
     """
     Iterate over objects in a directory and convert the naming of files to 
     be all lowercase and convert any hyphens to underscores.
@@ -66,41 +87,23 @@ def lowercase_files(dir: Path) -> None:
     :return: None
     """
     for x in dir.iterdir():
-        if x.is_file() and not x.name.startswith(".") and x.name not in do_not_change_these_files:
-            x.rename(x.name.lower().replace("-", "_"))
+        if x.is_file() and not x.name.startswith(".") and x.name not in do_not_change_these:
+            x.rename(x.with_name(x.name.lower().replace("-", "_")))
 
 
-def rename(user_path: str) -> None:
+def main() -> None:
     """
-    Calls all the helper functions in order to rename dirs and files based on the patterns, dir = all capital letters 
-    with underscores and files = all lowercase letters with underscores.
+    Calls all the helper functions 
 
     :param str user_path: A user provided path (str) to a directory
     :return: None
     """
-    # set path object from user string
-    path_object = get_path_object(user_path)
-    # change all dir names to be in all caps and convert hyphens to undersores
-    uppercase_dirs(path_object)
-    # change all file names to be in all lower case and convert hyphens to underscores
-    lowercase_files(path_object)
-    # print a formatted list of dirs then a formatted list of files
-    print_all_objects(path_object)
-
-
-######################################################
-#                      Main                          #
-######################################################
+    args = _parse_args()
+    path_object = _get_path_object(args.path)
+    _uppercase_dirs(path_object)
+    _lowercase_files(path_object)
+    _print_all_objects(path_object)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="Case changer",
-        description="Changes dirs to uppercase and files to lowercase and both with underscores"
-    )
-
-    parser.add_argument("path")
-
-    args = parser.parse_args()
-
-    rename(args.path)
+    main()
