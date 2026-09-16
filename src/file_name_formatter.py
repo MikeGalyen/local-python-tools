@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import logging
 
 
 # list of files and dirs not to rename
@@ -7,6 +8,9 @@ do_not_change_these = [
     "README.md",
     "src"
 ]
+
+#
+log = logging.getLogger(__name__)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -22,8 +26,9 @@ def _parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("path")
-    parser.add_argument("-i", "--ignore")
+    parser.add_argument("-i", "--ignore", nargs="+")
     parser.add_argument("-r", "--recursive", action="store_true")
+    parser.add_argument("-t", "--top", action="store_true")
 
     return parser.parse_args()
 
@@ -32,12 +37,13 @@ def _append_do_not_change_list(append_name: [str]) -> None:
     """
     Append user povided files or dirs to the do not change list
 
-    :param list append_name:
+    :param list append_name: a list of strings to append to the do not change list
     :return: None
     """
     if append_name is not None:
-        print(f"Ignoring: {append_name}")
-        do_not_change_these.append(append_name)
+        for name in append_name:
+            do_not_change_these.append(name)
+    print(f"Ignoring: {do_not_change_these}")
 
 
 def _get_path_object(user_path: str) -> Path:
@@ -51,89 +57,94 @@ def _get_path_object(user_path: str) -> Path:
     return Path(user_path)
 
 
-def _print_all_objects(dir: Path) -> None:
+def _uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: boolean = False) -> None:
     """
-    Print the directories then the files at a speciied directory
+    Transform dir names to uppercase and replace hyphens with underscores
 
     :param Path dir: A Path object to iterate
     :return: None
     """
 
-    print("\n-DIRS")
-    for object in dir.iterdir():
-        if object.is_dir():
-            print(object.name)
+    if not top_dir.exists():
+        log.error(f"Directory {top_dir.name} does not exist")
+        raise FileNotFoundError
 
-    print("\n-FILES")
-    for object in dir.iterdir():
-        if object.is_file():
-            print(object.name)
-
-    print("\n")
-
-
-def _uppercase(path_object: Path) -> None:
-    """
-    TODO
-
-    :param Path dir: A Path object to iterate
-    :return: None
-    """
-    
-    path_object.rename(path_object.with_name(path_object.name.upper().replace("-", "_")))
-            
-
-def _lowercase(path_object: Path) -> None:
-    """
-    TODO
-
-    :param Path dir: A Path object to iterate
-    :return: None
-    """
-    
-    path_object.rename(path_object.with_name(path_object.name.lower().replace("-", "_")))
-
-    
-def _rename(dir: Path, recursive: bool = False) -> None:
-    """
-    TODO
-    """
+    if not top_dir.is_dir():
+        log.error(f"{top_dir.name} is not a directory")
+        raise TypeError
 
     if recursive:
-        for root, dirs, files in dir.walk(top_down=False):
-            for name in dirs:
-                if name not in do_not_change_these:
-                    old = root / name
-                    new = root / name.upper().replace("-", "_")
-                    old.rename(new)
-            for name in files:
-                if name not in do_not_change_these:
-                    old = root / name
-                    new = root / name.lower().replace("-", "_")
-                    old.rename(new)
-        return 
-
-    for x in dir.iterdir():
-        if x.is_file() and not x.name.startswith(".") and x.name not in do_not_change_these:
-            _lowercase(x)
+        for root, dirs, files in top_dir.walk(top_down=False): 
+                for name in dirs:
+                    if not name in do_not_change_these:
+                        old = root / name
+                        new = root / name.upper().replace("-", "_")
+                        old.rename(old.with_name(new.name))
+    
+    for x in top_dir.iterdir():
         if x.is_dir() and not x.name.startswith(".") and x.name not in do_not_change_these:
-            _uppercase(x)
+            x.rename(x.with_name(x.name.upper().replace("-", "_")))
 
-def main() -> None:
+    if change_root:
+        for root, dirs, files in top_dir.walk(top_down=False): 
+            new = root.name.upper().replace("-", "_")
+            root.rename(root.with_name(new))
+            
+
+def _lowercase_files(top_dir: Path, recursive: boolean = False) -> None:
+    """
+    Transform filenames to lowercase and replace hyphens with underscores
+
+    :param Path dir: A Path object to iterate
+    :return: None
+    """
+
+    if not top_dir.exists():
+        log.error(f"Directory {top_dir.name} does not exist")
+        raise FileNotFoundError
+
+    if not top_dir.is_dir():
+        log.error(f"{top_dir.name} is not a directory")
+        raise TypeError
+
+    if recursive:
+        for root, dirs, files in top_dir.walk(top_down=False): 
+                for name in files:
+                    if not name in do_not_change_these:
+                        old = root / name
+                        new = root / name.lower().replace("-", "_")
+                        old.rename(old.with_name(new.name))
+
+    else:
+        for x in top_dir.iterdir():
+            if x.is_file() and not x.name.startswith(".") and x.name not in do_not_change_these:
+                x.rename(x.with_name(x.name.lower().replace("-", "_")))
+
+    
+def _rename(dir: Path, recursive: bool = False, change_root: bool = False) -> None:
+    """
+    Rename files and dirs recursively or at one dir level
+
+    :param dir Path: a path to iterate
+    :param recursive bool: flag from CLI args for recursing dirs
+    """
+    
+    _lowercase_files(dir, recursive)
+    _uppercase_dirs(dir, recursive, change_root)
+
+
+def main() -> int:
     """
     Calls all the helper functions 
 
     :param str user_path: A user provided path (str) to a directory
-    :return: None
+    :return int: 0 if successfull
     """
-
     args = _parse_args()
     path_object = _get_path_object(args.path)
-
-    _rename(path_object, args.recursive)
-  
-    _print_all_objects(path_object)
-
+    _append_do_not_change_list(args.ignore)
+    _rename(path_object, args.recursive, args.top)
+    return 0
 
 if __name__ == "__main__":
     main()
