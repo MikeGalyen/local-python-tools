@@ -1,10 +1,11 @@
 import argparse
 from pathlib import Path
 import logging
+import re
 
 
 # list of files and dirs not to rename
-do_not_change_these = [
+ignore_list = [
     "README.md",
     "src"
 ]
@@ -13,7 +14,7 @@ do_not_change_these = [
 log = logging.getLogger(__name__)
 
 
-def _parse_args() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     """
     Parse user args from CLI input
 
@@ -33,20 +34,41 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _append_do_not_change_list(append_name: [str]) -> None:
+def ignore(name: str) -> boolean:
     """
-    Append user povided files or dirs to the do not change list
+    Check if name matches names in ignore list and handle wildcard *
+
+    :param name str: a filename
+    :return: boolean
+    """
+    for ignore_name in ignore_list:
+        if ".*" in ignore_name:
+            if re.fullmatch(ignore_name, name):
+                return True
+        elif name in ignore_list:
+            return True
+    return False
+    
+
+
+def append_do_not_change_list(append_name: [str]) -> None:
+    """
+    Append user povided files or dirs to the do not change list and replace wildcard * with .*
 
     :param list append_name: a list of strings to append to the do not change list
     :return: None
     """
     if append_name is not None:
         for name in append_name:
-            do_not_change_these.append(name)
-    print(f"Ignoring: {do_not_change_these}")
+            if "*" in name:
+                name_with_re_pattern = name.replace("*", ".*")
+                ignore_list.append(name_with_re_pattern)
+            else:
+                ignore_list.append(name)
+    print(f"Ignoring: {ignore_list}")
 
 
-def _get_path_object(user_path: str) -> Path:
+def get_path_object(user_path: str) -> Path:
     """
     Convert a user str file path into a Path obejct
 
@@ -57,7 +79,7 @@ def _get_path_object(user_path: str) -> Path:
     return Path(user_path)
 
 
-def _uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: boolean = False) -> None:
+def uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: boolean = False) -> None:
     """
     Transform dir names to uppercase and replace hyphens with underscores
 
@@ -75,15 +97,16 @@ def _uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: bool
 
     if recursive:
         for root, dirs, files in top_dir.walk(top_down=False): 
-                for name in dirs:
-                    if not name in do_not_change_these:
-                        old = root / name
-                        new = root / name.upper().replace("-", "_")
-                        old.rename(old.with_name(new.name))
+            for name in dirs:
+                if not ignore(name):
+                    old = root / name
+                    new = root / name.upper().replace("-", "_")
+                    old.rename(old.with_name(new.name))
     
-    for x in top_dir.iterdir():
-        if x.is_dir() and not x.name.startswith(".") and x.name not in do_not_change_these:
-            x.rename(x.with_name(x.name.upper().replace("-", "_")))
+    else:
+        for x in top_dir.iterdir():
+            if x.is_dir() and not x.name.startswith(".") and not ignore(x.name):
+                x.rename(x.with_name(x.name.upper().replace("-", "_")))
 
     if change_root:
         for root, dirs, files in top_dir.walk(top_down=False): 
@@ -91,7 +114,7 @@ def _uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: bool
             root.rename(root.with_name(new))
             
 
-def _lowercase_files(top_dir: Path, recursive: boolean = False) -> None:
+def lowercase_files(top_dir: Path, recursive: boolean = False) -> None:
     """
     Transform filenames to lowercase and replace hyphens with underscores
 
@@ -110,18 +133,18 @@ def _lowercase_files(top_dir: Path, recursive: boolean = False) -> None:
     if recursive:
         for root, dirs, files in top_dir.walk(top_down=False): 
                 for name in files:
-                    if not name in do_not_change_these:
+                    if not ignore(name):
                         old = root / name
                         new = root / name.lower().replace("-", "_")
                         old.rename(old.with_name(new.name))
 
     else:
         for x in top_dir.iterdir():
-            if x.is_file() and not x.name.startswith(".") and x.name not in do_not_change_these:
+            if x.is_file() and not x.name.startswith(".") and not ignore(x.name):
                 x.rename(x.with_name(x.name.lower().replace("-", "_")))
 
     
-def _rename(dir: Path, recursive: bool = False, change_root: bool = False) -> None:
+def rename(dir: Path, recursive: bool = False, change_root: bool = False) -> None:
     """
     Rename files and dirs recursively or at one dir level
 
@@ -129,8 +152,8 @@ def _rename(dir: Path, recursive: bool = False, change_root: bool = False) -> No
     :param recursive bool: flag from CLI args for recursing dirs
     """
     
-    _lowercase_files(dir, recursive)
-    _uppercase_dirs(dir, recursive, change_root)
+    lowercase_files(dir, recursive)
+    uppercase_dirs(dir, recursive, change_root)
 
 
 def main() -> int:
@@ -140,11 +163,15 @@ def main() -> int:
     :param str user_path: A user provided path (str) to a directory
     :return int: 0 if successfull
     """
-    args = _parse_args()
-    path_object = _get_path_object(args.path)
-    _append_do_not_change_list(args.ignore)
-    _rename(path_object, args.recursive, args.top)
+
+    args = parse_args()
+    path_object = get_path_object(args.path)
+
+    append_do_not_change_list(args.ignore)
+    rename(path_object, args.recursive, args.top)
+
     return 0
+
 
 if __name__ == "__main__":
     main()
