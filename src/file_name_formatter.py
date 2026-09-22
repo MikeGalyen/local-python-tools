@@ -34,24 +34,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def ignore(name: str) -> boolean:
+def get_path_object(user_path: str) -> Path:
     """
-    Check if name matches names in ignore list and handle wildcard *
+    Convert a user str file path into a Path obejct
 
-    :param name str: a filename
-    :return: boolean
+    :param str user_path: A user provided path (str) to a directory
+    :return: A Path object based on the user provided path str
     """
-    for ignore_name in ignore_list:
-        if ".*" in ignore_name:
-            if re.fullmatch(ignore_name, name):
-                return True
-        elif name in ignore_list:
-            return True
-    return False
-    
+    if not Path(user_path).exists():
+        raise NotADirectoryError
+
+    return Path(user_path)
 
 
-def append_do_not_change_list(append_name: [str]) -> None:
+def append_ignore_list(append_name: [str]) -> None:
     """
     Append user povided files or dirs to the do not change list and replace wildcard * with .*
 
@@ -68,15 +64,20 @@ def append_do_not_change_list(append_name: [str]) -> None:
     print(f"Ignoring: {ignore_list}")
 
 
-def get_path_object(user_path: str) -> Path:
+def ignore(name: str) -> boolean:
     """
-    Convert a user str file path into a Path obejct
+    Check if name matches names in ignore list and handle wildcard *
 
-    :param str user_path: A user provided path (str) to a directory
-    :return: A Path object based on the user provided path str
+    :param name str: a filename
+    :return: boolean
     """
-
-    return Path(user_path)
+    for ignore_name in ignore_list:
+        if ".*" in ignore_name:
+            if re.fullmatch(ignore_name, name):
+                return True
+        elif name in ignore_list:
+            return True
+    return False
 
 
 def uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: boolean = False) -> None:
@@ -89,7 +90,7 @@ def uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: boole
 
     if not top_dir.exists():
         log.error(f"Directory {top_dir.name} does not exist")
-        raise FileNotFoundError
+        raise NotADirectoryError
 
     if not top_dir.is_dir():
         log.error(f"{top_dir.name} is not a directory")
@@ -124,7 +125,7 @@ def lowercase_files(top_dir: Path, recursive: boolean = False) -> None:
 
     if not top_dir.exists():
         log.error(f"Directory {top_dir.name} does not exist")
-        raise FileNotFoundError
+        raise NotADirectoryError
 
     if not top_dir.is_dir():
         log.error(f"{top_dir.name} is not a directory")
@@ -167,7 +168,7 @@ def main() -> int:
     args = parse_args()
     path_object = get_path_object(args.path)
 
-    append_do_not_change_list(args.ignore)
+    append_ignore_list(args.ignore)
     rename(path_object, args.recursive, args.top)
 
     return 0
