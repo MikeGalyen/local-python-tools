@@ -123,11 +123,11 @@ def lowercase_files(top_dir: Path, recursive: boolean = False) -> None:
 
     if recursive:
         for root, dirs, files in top_dir.walk(top_down=False): 
-                for name in files:
-                    if not ignore(name):
-                        old = root / name
-                        new = root / name.lower().replace("-", "_")
-                        old.rename(old.with_name(new.name))
+            for name in files:
+                if not ignore(name):
+                    old = root / name
+                    new = root / name.lower().replace("-", "_")
+                    old.rename(old.with_name(new.name))
 
     else:
         for x in top_dir.iterdir():
