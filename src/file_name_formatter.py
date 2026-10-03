@@ -5,9 +5,10 @@ import re
 
 
 # list of files and dirs not to rename
-ignore_list = [
+_ignore_list = [
     "README.md",
-    "src"
+    "src",
+    ".python-version"
 ]
 
 #
@@ -56,12 +57,8 @@ def append_ignore_list(append_name: [str]) -> None:
     """
     if append_name is not None:
         for name in append_name:
-            if "*" in name:
-                name_with_re_pattern = name.replace("*", ".*")
-                ignore_list.append(name_with_re_pattern)
-            else:
-                ignore_list.append(name)
-    print(f"Ignoring: {ignore_list}")
+            _ignore_list.append(name)
+    print(f"Ignoring: {_ignore_list}")
 
 
 def ignore(name: str) -> boolean:
@@ -71,11 +68,12 @@ def ignore(name: str) -> boolean:
     :param name str: a filename
     :return: boolean
     """
-    for ignore_name in ignore_list:
-        if ".*" in ignore_name:
-            if re.fullmatch(ignore_name, name):
+    for ignore_name in _ignore_list:
+        if "*" in name:
+            re_pattern_name = name.replace("*", ".*")
+            if re.fullmatch(re_pattern_name, ignore_name):
                 return True
-        elif name in ignore_list:
+        elif name == ignore_name:
             return True
     return False
 
@@ -87,10 +85,6 @@ def uppercase_dirs(top_dir: Path, recursive: boolean = False, change_root: boole
     :param Path dir: A Path object to iterate
     :return: None
     """
-
-    if not top_dir.exists():
-        log.error(f"Directory {top_dir.name} does not exist")
-        raise NotADirectoryError
 
     if not top_dir.is_dir():
         log.error(f"{top_dir.name} is not a directory")
@@ -122,10 +116,6 @@ def lowercase_files(top_dir: Path, recursive: boolean = False) -> None:
     :param Path dir: A Path object to iterate
     :return: None
     """
-
-    if not top_dir.exists():
-        log.error(f"Directory {top_dir.name} does not exist")
-        raise NotADirectoryError
 
     if not top_dir.is_dir():
         log.error(f"{top_dir.name} is not a directory")
