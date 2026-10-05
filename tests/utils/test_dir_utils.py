@@ -32,18 +32,18 @@ def make_test_file(file_name: str) -> None:
     _create_temp_dir()
     Path.touch(f"{_get_temp_dir_path()}/{file_name}")
 
-def make_random_test_files_and_dirs(up_to_n_files: int = 1, n_levels: int = 1) -> None:
+def make_random_test_files_and_dirs(up_to_n_files: int = 1, up_to_n_nested_dirs: int = 1) -> None:
     dirs = []
     _create_temp_dir()
     temp_dir = Path(_get_temp_dir_path())
-    for x in range(0, n_levels):
+    for x in range(0, randint(1, up_to_n_nested_dirs)):
         test_dir = f"test-dir-{x}"
         dirs.append(test_dir)
-        test_dir_full_path = f"{temp_dir}/{"/".join(dirs)}"
-        Path.mkdir(test_dir_full_path)
-        test_dir_path_object = Path(test_dir_full_path)
-        for x in range(1, randint(1, up_to_n_files)):
-            Path.touch(f"{test_dir_full_path}/Test-File-{x}")
+        appended_test_dir_full_path = f"{temp_dir}/{"/".join(dirs)}"
+        Path.mkdir(appended_test_dir_full_path)
+        for y in range(0, randint(1, up_to_n_files)):
+            print(appended_test_dir_full_path)
+            Path.touch(f"{appended_test_dir_full_path}/Test-File-{y}")
 
 
 def delete_test_dirs() -> None:

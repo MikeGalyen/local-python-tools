@@ -93,7 +93,7 @@ def test_uppercase_dirs_non_exsistent_dir_error_handling():
 
 @pytest.mark.devtest
 def test_uppercase_dirs_one_level_to_upper():
-    make_random_test_files_and_dirs(10, 6)
+    make_random_test_files_and_dirs(10, 10)
     delete_test_dirs()
 
 
